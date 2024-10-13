@@ -1,0 +1,51 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:13
+    container_name: postgres_db
+    environment:
+      POSTGRES_DB: CashDB
+      POSTGRES_USER: testCash
+      POSTGRES_PASSWORD: testCash
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  app:
+    build: .
+    container_name: server
+    env_file: .env
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+      - redis
+
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    entrypoint:
+      [
+        "migrate",
+        "-path",
+        "/migrations",
+        "-database",
+        "postgres://testCash:testCash@postgres:5432/CashDB?sslmode=disable",
+        "up",
+      ]
+    volumes:
+      - ./internal/repo/postgresql/migrations:/migrations
+    depends_on:
+      - postgres
+
+  redis:
+    image: redis:alpine
+    container_name: redis_db
+    ports:
+      - "6379:6379"
+
+volumes:
+  postgres_data:
